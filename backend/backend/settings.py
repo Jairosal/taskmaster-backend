@@ -67,6 +67,7 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 # Database
 if os.getenv('RAILWAY_ENVIRONMENT', None):
+    # Configuración para Railway (PostgreSQL)
     DATABASES = {
         'default': dj_database_url.config(
             conn_max_age=600,
@@ -74,6 +75,7 @@ if os.getenv('RAILWAY_ENVIRONMENT', None):
         )
     }
 else:
+    # Tu configuración local actual (mantén esta igual)
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
