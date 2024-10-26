@@ -147,12 +147,41 @@ SIMPLE_JWT = {
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
 }
 
+# CORS Settings
 CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
     "http://localhost:3000",
     "https://taskmaster-frontend-wine.vercel.app"
 ])
+
 CORS_ALLOW_CREDENTIALS = True
 
+# Configuraciones adicionales de CORS
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+# Permitir que las cookies se envíen en las solicitudes cross-origin
+CORS_ALLOW_CREDENTIALS = True
+
+# Tiempo que el navegador debe cachear la respuesta del preflight
+CORS_PREFLIGHT_MAX_AGE = 86400  # 24 horas
 # Custom User Model
 AUTH_USER_MODEL = 'users.CustomUser'
 
