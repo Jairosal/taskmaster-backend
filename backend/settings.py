@@ -23,6 +23,8 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 RAILWAY_STATIC_URL = os.getenv('RAILWAY_STATIC_URL', '')
 RAILWAY_ENVIRONMENT = os.getenv('RAILWAY_ENVIRONMENT', None)
 
+FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:3000')
+
 # Security settings
 try:
     SECRET_KEY = env('SECRET_KEY')

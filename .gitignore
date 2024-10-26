@@ -52,3 +52,10 @@ htmlcov/
 
 # Misc
 .DS_Store
+
+# Static files
+/staticfiles/*
+!staticfiles/.gitkeep
+
+# Pero mantén el archivo .gitkeep
+!/static/.gitkeep

@@ -95,14 +95,20 @@ class PasswordResetRequestView(APIView):
            if not user:
                logger.warning(f"No user found with email: {email}")
                return Response(
-                   {"error": "No se encontró un usuario con este correo electrónico"}, 
-                   status=status.HTTP_404_NOT_FOUND
+                   {"message": "Si existe una cuenta con este correo, recibirá las instrucciones."}, 
+                   status=status.HTTP_200_OK
                )
+
+           # Obtén FRONTEND_URL de manera segura
+           frontend_url = getattr(settings, 'FRONTEND_URL', None)
+           if not frontend_url:
+               logger.error("FRONTEND_URL no está configurado")
+               frontend_url = request.build_absolute_uri('/')[:-1]  # Fallback a la URL actual
 
            # Genera el token y la URL
            token = default_token_generator.make_token(user)
            uid = urlsafe_base64_encode(force_bytes(user.pk))
-           reset_url = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}/"
+           reset_url = f"{frontend_url}/reset-password/{uid}/{token}"
 
            context = {
                'user': user,
@@ -116,7 +122,7 @@ class PasswordResetRequestView(APIView):
                
                # Envía el correo
                subject = 'Solicitud de restablecimiento de contraseña'
-               from_email = settings.DEFAULT_FROM_EMAIL
+               from_email = settings.EMAIL_HOST_USER
                recipient_list = [email]
                
                send_mail(
@@ -137,13 +143,13 @@ class PasswordResetRequestView(APIView):
            except Exception as e:
                logger.error(f"Error sending email: {str(e)}")
                return Response(
-                   {"error": f"Error al enviar el correo: {str(e)}"}, 
+                   {"error": "Error al enviar el correo electrónico"}, 
                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
                )
 
        except Exception as e:
-           print(f"Error inesperado: {str(e)}")
            logger.error(f"Unexpected error in password reset: {str(e)}")
+           print(f"Error inesperado: {str(e)}")
            return Response(
                {"error": "Ocurrió un error inesperado"}, 
                status=status.HTTP_500_INTERNAL_SERVER_ERROR
