@@ -9,13 +9,16 @@ import dj_database_url
 env = environ.Env()
 environ.Env.read_env()
 
+RAILWAY_STATIC_URL = os.getenv('RAILWAY_STATIC_URL', '')
+RAILWAY_ENVIRONMENT = os.getenv('RAILWAY_ENVIRONMENT', None)
+
 # Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Security settings
 SECRET_KEY = env('SECRET_KEY')
 DEBUG = env.bool('DEBUG', False)
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')
+ALLOWED_HOSTS = ['*'] 
 
 # Application definition
 INSTALLED_APPS = [
@@ -145,8 +148,11 @@ SIMPLE_JWT = {
 }
 
 # CORS Settings
-CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS')
-FRONTEND_URL = env('FRONTEND_URL')
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "https://localhost:3000",
+]
+CORS_ALLOW_ALL_ORIGINS = True
 
 # Custom User Model
 AUTH_USER_MODEL = 'users.CustomUser'
