@@ -4,21 +4,34 @@ from datetime import timedelta
 import environ
 import dj_database_url
 
-
-# Inicializar environ
-env = environ.Env()
-environ.Env.read_env()
-
-RAILWAY_STATIC_URL = os.getenv('RAILWAY_STATIC_URL', '')
-RAILWAY_ENVIRONMENT = os.getenv('RAILWAY_ENVIRONMENT', None)
+# Inicializar environ con valores por defecto
+env = environ.Env(
+    DEBUG=(bool, False),
+    ALLOWED_HOSTS=(list, ['*']),
+    CORS_ALLOWED_ORIGINS=(list, ['http://localhost:3000', 'https://taskmaster-frontend-wine.vercel.app']),
+    EMAIL_PORT=(int, 587),
+    EMAIL_USE_TLS=(bool, True),
+)
 
 # Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Lee el archivo .env
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+
+# Railway specific
+RAILWAY_STATIC_URL = os.getenv('RAILWAY_STATIC_URL', '')
+RAILWAY_ENVIRONMENT = os.getenv('RAILWAY_ENVIRONMENT', None)
+
 # Security settings
-SECRET_KEY = env('SECRET_KEY')
-DEBUG = env.bool('DEBUG', False)
-ALLOWED_HOSTS = ['*'] 
+try:
+    SECRET_KEY = env('SECRET_KEY')
+except Exception as e:
+    print(f"Error loading SECRET_KEY: {e}")
+    SECRET_KEY = 'django-insecure-u&x)y6+%$b6_nic2*_o(vjqcmid9+g6_-!i4bc)u*8=t)&+y=+'
+
+DEBUG = env('DEBUG')
+ALLOWED_HOSTS = env('ALLOWED_HOSTS')
 
 # Application definition
 INSTALLED_APPS = [
@@ -27,18 +40,19 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
     'tasks',
     'users',
-    'whitenoise.runserver_nostatic',  # Añadido para archivos estáticos
 ]
 
+# Middleware
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # Añadido para archivos estáticos
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -69,16 +83,15 @@ TEMPLATES = [
 WSGI_APPLICATION = 'backend.wsgi.application'
 
 # Database
-if os.getenv('RAILWAY_ENVIRONMENT', None):
-    # Configuración para Railway (PostgreSQL)
+if RAILWAY_ENVIRONMENT:
     DATABASES = {
         'default': dj_database_url.config(
+            default=os.getenv('DATABASE_URL'),
             conn_max_age=600,
             conn_health_checks=True,
         )
     }
 else:
-    # Tu configuración local actual (mantén esta igual)
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -113,7 +126,7 @@ USE_I18N = True
 USE_TZ = True
 
 # Static files
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
@@ -131,7 +144,6 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
-    'TEST_REQUEST_DEFAULT_FORMAT': 'json'
 }
 
 # JWT Settings
@@ -148,14 +160,8 @@ SIMPLE_JWT = {
 }
 
 # CORS Settings
-CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
-    "http://localhost:3000",
-    "https://taskmaster-frontend-wine.vercel.app"
-])
-
+CORS_ALLOWED_ORIGINS = env('CORS_ALLOWED_ORIGINS')
 CORS_ALLOW_CREDENTIALS = True
-
-# Configuraciones adicionales de CORS
 CORS_ALLOW_METHODS = [
     'DELETE',
     'GET',
@@ -164,7 +170,6 @@ CORS_ALLOW_METHODS = [
     'POST',
     'PUT',
 ]
-
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
@@ -176,12 +181,8 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
 ]
+CORS_PREFLIGHT_MAX_AGE = 86400
 
-# Permitir que las cookies se envíen en las solicitudes cross-origin
-CORS_ALLOW_CREDENTIALS = True
-
-# Tiempo que el navegador debe cachear la respuesta del preflight
-CORS_PREFLIGHT_MAX_AGE = 86400  # 24 horas
 # Custom User Model
 AUTH_USER_MODEL = 'users.CustomUser'
 
@@ -195,12 +196,13 @@ EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 
 # Security Settings for Production
 if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
-    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
@@ -212,27 +214,9 @@ LOGGING = {
         'console': {
             'class': 'logging.StreamHandler',
         },
-        'file': {
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs', 'debug.log'),
-            'formatter': 'verbose',
-        },
-    },
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {message}',
-            'style': '{',
-        },
     },
     'root': {
-        'handlers': ['console', 'file'],
+        'handlers': ['console'],
         'level': 'INFO',
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['console', 'file'],
-            'level': 'INFO',
-            'propagate': True,
-        },
     },
 }
