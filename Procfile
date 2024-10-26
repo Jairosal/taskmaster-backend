@@ -1,1 +1,1 @@
-web: python manage.py migrate && python manage.py collectstatic --noinput && gunicorn backend.wsgi
+web: gunicorn backend.wsgi:application --log-file -
