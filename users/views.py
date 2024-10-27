@@ -81,6 +81,17 @@ class PasswordResetRequestView(APIView):
 
     def post(self, request):
         try:
+            # Debug de configuración al inicio
+            print("\n=== DEBUG EMAIL SETTINGS ===")
+            print(f"EMAIL_BACKEND: {settings.EMAIL_BACKEND}")
+            print(f"EMAIL_HOST: {settings.EMAIL_HOST}")
+            print(f"EMAIL_PORT: {settings.EMAIL_PORT}")
+            print(f"EMAIL_USE_TLS: {settings.EMAIL_USE_TLS}")
+            print(f"EMAIL_HOST_USER: {settings.EMAIL_HOST_USER}")
+            print(f"EMAIL_HOST_PASSWORD set: {'Yes' if settings.EMAIL_HOST_PASSWORD else 'No'}")
+            print(f"PASSWORD length: {len(settings.EMAIL_HOST_PASSWORD) if settings.EMAIL_HOST_PASSWORD else 0}")
+            print("=========================\n")
+
             email = request.data.get('email')
             print(f"\n=== Iniciando proceso de reset de contraseña ===")
             print(f"Email solicitado: {email}")
@@ -103,6 +114,7 @@ class PasswordResetRequestView(APIView):
             token = default_token_generator.make_token(user)
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             reset_url = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}"
+            print(f"URL de reset generada: {reset_url}")
 
             try:
                 # Renderiza el template
@@ -142,12 +154,14 @@ class PasswordResetRequestView(APIView):
                 print(f"\n✗ Error al enviar el correo:")
                 print(f"Tipo de error: {type(mail_error).__name__}")
                 print(f"Mensaje de error: {str(mail_error)}")
-                print(f"Configuración de correo:")
+                print(f"Configuración de correo completa:")
                 print(f"BACKEND: {settings.EMAIL_BACKEND}")
                 print(f"HOST: {settings.EMAIL_HOST}")
                 print(f"PORT: {settings.EMAIL_PORT}")
                 print(f"TLS: {settings.EMAIL_USE_TLS}")
                 print(f"USER: {settings.EMAIL_HOST_USER}")
+                print(f"FROM_EMAIL: {getattr(settings, 'DEFAULT_FROM_EMAIL', 'Not set')}")
+                print(f"SERVER_EMAIL: {getattr(settings, 'SERVER_EMAIL', 'Not set')}")
                 return Response(
                     {"error": "Error al enviar el correo. Por favor, intente más tarde."}, 
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
