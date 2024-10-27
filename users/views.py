@@ -77,83 +77,90 @@ class ChangePasswordView(generics.UpdateAPIView):
 
     
 class PasswordResetRequestView(APIView):
-   permission_classes = [AllowAny]
+    permission_classes = [AllowAny]
 
-   def post(self, request):
-       try:
-           print("Headers recibidos:", request.headers)
-           print("Datos recibidos:", request.data)
-           
-           email = request.data.get('email')
-           if not email:
-               return Response(
-                   {"error": "Se requiere un correo electrónico"}, 
-                   status=status.HTTP_400_BAD_REQUEST
-               )
+    def post(self, request):
+        try:
+            email = request.data.get('email')
+            print(f"\n=== Iniciando proceso de reset de contraseña ===")
+            print(f"Email solicitado: {email}")
+            print(f"Usando correo remitente: {settings.EMAIL_HOST_USER}")
 
-           user = CustomUser.objects.filter(email=email).first()
-           if not user:
-               logger.warning(f"No user found with email: {email}")
-               return Response(
-                   {"message": "Si existe una cuenta con este correo, recibirá las instrucciones."}, 
-                   status=status.HTTP_200_OK
-               )
+            if not email:
+                return Response(
+                    {"error": "Se requiere un correo electrónico"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
-           # Obtén FRONTEND_URL de manera segura
-           frontend_url = getattr(settings, 'FRONTEND_URL', None)
-           if not frontend_url:
-               logger.error("FRONTEND_URL no está configurado")
-               frontend_url = request.build_absolute_uri('/')[:-1]  # Fallback a la URL actual
+            user = CustomUser.objects.filter(email=email).first()
+            if not user:
+                return Response(
+                    {"message": "Si existe una cuenta con este correo, recibirá las instrucciones."}, 
+                    status=status.HTTP_200_OK
+                )
 
-           # Genera el token y la URL
-           token = default_token_generator.make_token(user)
-           uid = urlsafe_base64_encode(force_bytes(user.pk))
-           reset_url = f"{frontend_url}/reset-password/{uid}/{token}"
+            # Genera el token y la URL
+            token = default_token_generator.make_token(user)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            reset_url = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}"
 
-           context = {
-               'user': user,
-               'reset_url': reset_url
-           }
+            try:
+                # Renderiza el template
+                context = {
+                    'user': user,
+                    'reset_url': reset_url,
+                }
+                email_html_message = render_to_string('password_reset_email.html', context)
 
-           try:
-               # Renderiza el template
-               template_name = 'password_reset_email.html'
-               email_html_message = render_to_string(template_name, context)
-               
-               # Envía el correo
-               subject = 'Solicitud de restablecimiento de contraseña'
-               from_email = settings.EMAIL_HOST_USER
-               recipient_list = [email]
-               
-               send_mail(
-                   subject=subject,
-                   message='',
-                   from_email=from_email,
-                   recipient_list=recipient_list,
-                   html_message=email_html_message,
-                   fail_silently=False,
-               )
-               
-               logger.info(f"Password reset email sent successfully to {email}")
-               return Response(
-                   {"message": "Se ha enviado un correo con las instrucciones"}, 
-                   status=status.HTTP_200_OK
-               )
-               
-           except Exception as e:
-               logger.error(f"Error sending email: {str(e)}")
-               return Response(
-                   {"error": "Error al enviar el correo electrónico"}, 
-                   status=status.HTTP_500_INTERNAL_SERVER_ERROR
-               )
+                # Configuración explícita del correo
+                subject = 'Restablecer tu contraseña - TaskMaster'
+                from_email = settings.EMAIL_HOST_USER
+                recipient_list = [email]
 
-       except Exception as e:
-           logger.error(f"Unexpected error in password reset: {str(e)}")
-           print(f"Error inesperado: {str(e)}")
-           return Response(
-               {"error": "Ocurrió un error inesperado"}, 
-               status=status.HTTP_500_INTERNAL_SERVER_ERROR
-           )
+                print("\nEnviando correo con la siguiente configuración:")
+                print(f"From: {from_email}")
+                print(f"To: {recipient_list}")
+                print(f"Subject: {subject}")
+
+                # Intenta enviar el correo
+                send_mail(
+                    subject=subject,
+                    message='',  # Versión texto plano
+                    html_message=email_html_message,
+                    from_email=from_email,
+                    recipient_list=recipient_list,
+                    fail_silently=False,
+                )
+                
+                print("✓ Correo enviado exitosamente")
+                return Response(
+                    {"message": "Se ha enviado un correo con las instrucciones"}, 
+                    status=status.HTTP_200_OK
+                )
+            
+            except Exception as mail_error:
+                print(f"\n✗ Error al enviar el correo:")
+                print(f"Tipo de error: {type(mail_error).__name__}")
+                print(f"Mensaje de error: {str(mail_error)}")
+                print(f"Configuración de correo:")
+                print(f"BACKEND: {settings.EMAIL_BACKEND}")
+                print(f"HOST: {settings.EMAIL_HOST}")
+                print(f"PORT: {settings.EMAIL_PORT}")
+                print(f"TLS: {settings.EMAIL_USE_TLS}")
+                print(f"USER: {settings.EMAIL_HOST_USER}")
+                return Response(
+                    {"error": "Error al enviar el correo. Por favor, intente más tarde."}, 
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+        except Exception as e:
+            print(f"\n✗ Error general:")
+            print(f"Tipo: {type(e).__name__}")
+            print(f"Mensaje: {str(e)}")
+            return Response(
+                {"error": "Error interno del servidor"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
 class PasswordResetConfirmView(APIView):
     permission_classes = (AllowAny,)
